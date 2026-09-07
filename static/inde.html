@@ -1,0 +1,2695 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Guam AI Host</title>
+
+  <meta
+
+    name="description"
+
+    content="Your AI-powered local host for discovering and booking experiences in Guam."
+
+  >
+
+  <style>
+
+    :root {
+
+      --bg: #f4f7fb;
+
+      --card: #ffffff;
+
+      --text: #152033;
+
+      --muted: #68778c;
+
+      --primary: #1677ff;
+
+      --primary-dark: #0f5dcc;
+
+      --border: #dce3ec;
+
+      --success: #14804a;
+
+      --danger: #c62828;
+
+      --shadow: 0 8px 30px rgba(20, 40, 70, 0.08);
+
+      --radius: 18px;
+
+    }
+
+    * {
+
+      box-sizing: border-box;
+
+    }
+
+    body {
+
+      margin: 0;
+
+      background: var(--bg);
+
+      color: var(--text);
+
+      font-family:
+
+        Inter,
+
+        system-ui,
+
+        -apple-system,
+
+        BlinkMacSystemFont,
+
+        "Segoe UI",
+
+        sans-serif;
+
+    }
+
+    button,
+
+    input,
+
+    textarea,
+
+    select {
+
+      font: inherit;
+
+    }
+
+    button {
+
+      cursor: pointer;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* HEADER */
+
+    /* -------------------------------------------------- */
+
+    header {
+
+      position: sticky;
+
+      top: 0;
+
+      z-index: 10;
+
+      background: #102a43;
+
+      color: white;
+
+      padding: 14px 5%;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: space-between;
+
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+    }
+
+    .brand {
+
+      font-weight: 800;
+
+      font-size: 18px;
+
+    }
+
+    nav {
+
+      display: flex;
+
+      gap: 7px;
+
+      flex-wrap: wrap;
+
+      justify-content: flex-end;
+
+    }
+
+    nav button {
+
+      background: rgba(255, 255, 255, 0.12);
+
+      color: white;
+
+      border: 1px solid rgba(255, 255, 255, 0.18);
+
+      border-radius: 10px;
+
+      padding: 8px 12px;
+
+    }
+
+    nav button:hover {
+
+      background: rgba(255, 255, 255, 0.22);
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* LAYOUT */
+
+    /* -------------------------------------------------- */
+
+    main {
+
+      max-width: 1180px;
+
+      margin: 0 auto;
+
+      padding: 28px 18px 60px;
+
+    }
+
+    section {
+
+      margin-bottom: 30px;
+
+    }
+
+    .hero {
+
+      padding: 28px 0 20px;
+
+    }
+
+    .hero h1 {
+
+      margin: 0 0 10px;
+
+      font-size: clamp(34px, 6vw, 60px);
+
+      line-height: 1;
+
+      letter-spacing: -2px;
+
+    }
+
+    .hero p {
+
+      max-width: 700px;
+
+      font-size: 18px;
+
+      line-height: 1.6;
+
+    }
+
+    .muted {
+
+      color: var(--muted);
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* CARDS */
+
+    /* -------------------------------------------------- */
+
+    .card {
+
+      background: var(--card);
+
+      border: 1px solid var(--border);
+
+      border-radius: var(--radius);
+
+      padding: 20px;
+
+      box-shadow: var(--shadow);
+
+    }
+
+    .grid {
+
+      display: grid;
+
+      grid-template-columns:
+
+        repeat(auto-fit, minmax(250px, 1fr));
+
+      gap: 16px;
+
+    }
+
+    .experience-card {
+
+      display: flex;
+
+      flex-direction: column;
+
+      min-height: 300px;
+
+    }
+
+    .experience-card .bottom {
+
+      margin-top: auto;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* PILLS */
+
+    /* -------------------------------------------------- */
+
+    .pill {
+
+      display: inline-block;
+
+      padding: 5px 9px;
+
+      border-radius: 999px;
+
+      background: #eaf2ff;
+
+      color: #145fc5;
+
+      font-size: 12px;
+
+      font-weight: 700;
+
+      margin: 2px 3px 2px 0;
+
+    }
+
+    .spots {
+
+      background: #eef8f2;
+
+      color: var(--success);
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* BUTTONS */
+
+    /* -------------------------------------------------- */
+
+    .button {
+
+      border: 0;
+
+      border-radius: 11px;
+
+      padding: 12px 17px;
+
+      background: var(--primary);
+
+      color: white;
+
+      font-weight: 700;
+
+    }
+
+    .button:hover {
+
+      background: var(--primary-dark);
+
+    }
+
+    .button.secondary {
+
+      background: #e9eef5;
+
+      color: #26384e;
+
+    }
+
+    .button.danger {
+
+      background: var(--danger);
+
+    }
+
+    .button:disabled {
+
+      opacity: 0.5;
+
+      cursor: not-allowed;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* AI HOST */
+
+    /* -------------------------------------------------- */
+
+    .ai-box {
+
+      display: grid;
+
+      grid-template-columns: 1fr;
+
+      gap: 12px;
+
+    }
+
+    textarea,
+
+    input,
+
+    select {
+
+      width: 100%;
+
+      border: 1px solid var(--border);
+
+      border-radius: 11px;
+
+      padding: 12px;
+
+      background: white;
+
+      color: var(--text);
+
+      outline: none;
+
+    }
+
+    textarea {
+
+      min-height: 120px;
+
+      resize: vertical;
+
+    }
+
+    textarea:focus,
+
+    input:focus,
+
+    select:focus {
+
+      border-color: var(--primary);
+
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1);
+
+    }
+
+    .ai-response {
+
+      min-height: 70px;
+
+      white-space: pre-wrap;
+
+      line-height: 1.6;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* EXPERIENCE */
+
+    /* -------------------------------------------------- */
+
+    .experience-card h3 {
+
+      margin: 9px 0;
+
+      font-size: 20px;
+
+    }
+
+    .experience-card p {
+
+      line-height: 1.5;
+
+    }
+
+    .price {
+
+      font-size: 24px;
+
+      font-weight: 850;
+
+      margin: 10px 0;
+
+    }
+
+    .meta {
+
+      color: var(--muted);
+
+      font-size: 14px;
+
+      line-height: 1.7;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* FORMS */
+
+    /* -------------------------------------------------- */
+
+    .form-grid {
+
+      display: grid;
+
+      grid-template-columns:
+
+        repeat(auto-fit, minmax(220px, 1fr));
+
+      gap: 12px;
+
+    }
+
+    label {
+
+      display: block;
+
+      font-size: 14px;
+
+      font-weight: 700;
+
+    }
+
+    label input,
+
+    label textarea,
+
+    label select {
+
+      margin-top: 6px;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* STATS */
+
+    /* -------------------------------------------------- */
+
+    .stat {
+
+      text-align: center;
+
+    }
+
+    .stat-number {
+
+      font-size: 30px;
+
+      font-weight: 850;
+
+      margin-top: 5px;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* MODAL */
+
+    /* -------------------------------------------------- */
+
+    .modal-backdrop {
+
+      position: fixed;
+
+      inset: 0;
+
+      background: rgba(8, 24, 40, 0.65);
+
+      display: none;
+
+      align-items: center;
+
+      justify-content: center;
+
+      z-index: 100;
+
+      padding: 18px;
+
+    }
+
+    .modal {
+
+      width: min(500px, 100%);
+
+      background: white;
+
+      border-radius: 20px;
+
+      padding: 24px;
+
+      max-height: 90vh;
+
+      overflow-y: auto;
+
+    }
+
+    .modal h2 {
+
+      margin-top: 0;
+
+    }
+
+    .modal-actions {
+
+      display: flex;
+
+      gap: 10px;
+
+      margin-top: 16px;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* NOTICES */
+
+    /* -------------------------------------------------- */
+
+    .notice {
+
+      padding: 12px 15px;
+
+      border-radius: 11px;
+
+      background: #eef5ff;
+
+      color: #1d4f91;
+
+      margin-top: 12px;
+
+    }
+
+    .notice.success {
+
+      background: #edf8f1;
+
+      color: #12633b;
+
+    }
+
+    .notice.error {
+
+      background: #fff0f0;
+
+      color: #9b2222;
+
+    }
+
+    /* -------------------------------------------------- */
+
+    /* MOBILE */
+
+    /* -------------------------------------------------- */
+
+    @media (max-width: 650px) {
+
+      header {
+
+        align-items: flex-start;
+
+        gap: 12px;
+
+        flex-direction: column;
+
+      }
+
+      nav {
+
+        width: 100%;
+
+        justify-content: flex-start;
+
+      }
+
+      .hero h1 {
+
+        letter-spacing: -1px;
+
+      }
+
+      main {
+
+        padding-top: 16px;
+
+      }
+
+      .modal-actions {
+
+        flex-direction: column;
+
+      }
+
+      .button {
+
+        width: 100%;
+
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<header>
+
+  <div class="brand">
+
+    🌴 Guam AI Host
+
+  </div>
+
+  <nav>
+
+    <button onclick="showSection('traveler')">
+
+      Traveler
+
+    </button>
+
+    <button onclick="showSection('business')">
+
+      Business
+
+    </button>
+
+    <button onclick="showSection('admin')">
+
+      Admin
+
+    </button>
+
+  </nav>
+
+</header>
+
+<main>
+
+  <!-- ================================================== -->
+
+  <!-- TRAVELER -->
+
+  <!-- ================================================== -->
+
+  <section id="traveler">
+
+    <div class="hero">
+
+      <h1>
+
+        Your AI host for Guam.
+
+      </h1>
+
+      <p class="muted">
+
+        Tell us what you want to experience.
+
+        Guam AI Host finds local experiences that fit
+
+        your time, interests and budget.
+
+      </p>
+
+    </div>
+
+    <div class="card">
+
+      <h2>
+
+        🤖 Ask your AI Host
+
+      </h2>
+
+      <div class="ai-box">
+
+        <textarea
+
+          id="aiPrompt"
+
+          placeholder="Example: We're a Korean couple. We have tonight free, around $150 per person. We want something romantic, local and not too touristy."
+
+        ></textarea>
+
+        <input
+
+          id="aiBudget"
+
+          type="number"
+
+          min="0"
+
+          placeholder="Budget per person — optional"
+
+        >
+
+        <div>
+
+          <button
+
+            class="button"
+
+            onclick="askAI()"
+
+            id="askButton"
+
+          >
+
+            Ask AI Host
+
+          </button>
+
+        </div>
+
+      </div>
+
+      <div
+
+        id="aiResponse"
+
+        class="notice ai-response"
+
+      >
+
+        Tell me what you're looking for and I'll
+
+        find some options.
+
+      </div>
+
+    </div>
+
+    <h2>
+
+      🌴 Live Guam Experiences
+
+    </h2>
+
+    <div
+
+      id="experienceList"
+
+      class="grid"
+
+    >
+
+      Loading experiences...
+
+    </div>
+
+  </section>
+
+  <!-- ================================================== -->
+
+  <!-- BUSINESS -->
+
+  <!-- ================================================== -->
+
+  <section
+
+    id="business"
+
+    style="display:none"
+
+  >
+
+    <div class="hero">
+
+      <h1>
+
+        Business Portal
+
+      </h1>
+
+      <p class="muted">
+
+        Put your available Guam experiences in front
+
+        of travelers looking for something to do right now.
+
+      </p>
+
+    </div>
+
+    <div class="card">
+
+      <h2>
+
+        Publish a live offer
+
+      </h2>
+
+      <div class="form-grid">
+
+        <label>
+
+          Business name
+
+          <input
+
+            id="businessName"
+
+            value="New Guam Partner"
+
+          >
+
+        </label>
+
+        <label>
+
+          Offer title
+
+          <input
+
+            id="businessTitle"
+
+            placeholder="Example: Sunset paddleboard tour"
+
+          >
+
+        </label>
+
+        <label>
+
+          Category
+
+          <select id="businessCategory">
+
+            <option value="beach">
+
+              Beach
+
+            </option>
+
+            <option value="ocean">
+
+              Ocean
+
+            </option>
+
+            <option value="food">
+
+              Food
+
+            </option>
+
+            <option value="wellness">
+
+              Wellness
+
+            </option>
+
+            <option value="culture">
+
+              Culture
+
+            </option>
+
+            <option value="photo">
+
+              Photography
+
+            </option>
+
+            <option value="adventure">
+
+              Adventure
+
+            </option>
+
+          </select>
+
+        </label>
+
+        <label>
+
+          Price
+
+          <input
+
+            id="businessPrice"
+
+            type="number"
+
+            min="0"
+
+            value="59"
+
+          >
+
+        </label>
+
+        <label>
+
+          Start time
+
+          <input
+
+            id="businessStart"
+
+            value="2026-09-07 19:00"
+
+          >
+
+        </label>
+
+        <label>
+
+          Duration — minutes
+
+          <input
+
+            id="businessDuration"
+
+            type="number"
+
+            min="1"
+
+            value="90"
+
+          >
+
+        </label>
+
+        <label>
+
+          Available spots
+
+          <input
+
+            id="businessSpots"
+
+            type="number"
+
+            min="0"
+
+            value="6"
+
+          >
+
+        </label>
+
+        <label>
+
+          Location
+
+          <input
+
+            id="businessLocation"
+
+            value="Tumon"
+
+          >
+
+        </label>
+
+      </div>
+
+      <label>
+
+        Description
+
+        <textarea
+
+          id="businessDescription"
+
+          placeholder="Describe the experience for travelers."
+
+        ></textarea>
+
+      </label>
+
+      <label>
+
+        Tags
+
+        <input
+
+          id="businessTags"
+
+          placeholder="romantic, local, sunset, japanese, korean"
+
+        >
+
+      </label>
+
+      <button
+
+        class="button"
+
+        onclick="publishExperience()"
+
+      >
+
+        Publish Live Offer
+
+      </button>
+
+      <div id="publishMessage"></div>
+
+    </div>
+
+  </section>
+
+  <!-- ================================================== -->
+
+  <!-- ADMIN -->
+
+  <!-- ================================================== -->
+
+  <section
+
+    id="admin"
+
+    style="display:none"
+
+  >
+
+    <div class="hero">
+
+      <h1>
+
+        Admin Dashboard
+
+      </h1>
+
+      <p class="muted">
+
+        Monitor travelers, bookings, live offers and GMV.
+
+      </p>
+
+    </div>
+
+    <div
+
+      id="stats"
+
+      class="grid"
+
+    >
+
+      Loading...
+
+    </div>
+
+    <h2>
+
+      Recent Bookings
+
+    </h2>
+
+    <div
+
+      id="bookingList"
+
+      class="grid"
+
+    >
+
+      Loading...
+
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ==================================================== -->
+
+<!-- BOOKING MODAL -->
+
+<!-- ==================================================== -->
+
+<div
+
+  id="bookingModal"
+
+  class="modal-backdrop"
+
+
+
+  <div class="modal">
+
+    <h2>
+
+      Book this experience
+
+    </h2>
+
+    <div
+
+      id="bookingExperience"
+
+      class="notice"
+
+    ></div>
+
+    <label>
+
+      Your name
+
+      <input
+
+        id="travelerName"
+
+        placeholder="Your name"
+
+      >
+
+    </label>
+
+    <label>
+
+      Email
+
+      <input
+
+        id="travelerEmail"
+
+        type="email"
+
+        placeholder="you@example.com"
+
+      >
+
+    </label>
+
+    <label>
+
+      Language
+
+      <select id="travelerLanguage">
+
+        <option value="en">
+
+          English
+
+        </option>
+
+        <option value="ja">
+
+          日本語
+
+        </option>
+
+        <option value="ko">
+
+          한국어
+
+        </option>
+
+      </select>
+
+    </label>
+
+    <label>
+
+      Quantity
+
+      <input
+
+        id="travelerQuantity"
+
+        type="number"
+
+        min="1"
+
+        value="1"
+
+      >
+
+    </label>
+
+    <div
+
+      id="bookingMessage"
+
+    ></div>
+
+    <div class="modal-actions">
+
+      <button
+
+        class="button"
+
+        onclick="completeBooking()"
+
+      >
+
+        Confirm Booking
+
+      </button>
+
+      <button
+
+        class="button secondary"
+
+        onclick="closeBooking()"
+
+      >
+
+        Cancel
+
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  // ======================================================
+
+  // GLOBAL STATE
+
+  // ======================================================
+
+  let experiences = [];
+
+  let selectedExperience = null;
+
+  // ======================================================
+
+  // API HELPER
+
+  // ======================================================
+
+  async function api(
+
+    endpoint,
+
+    options = {}
+
+  ) {
+
+    const response = await fetch(
+
+      endpoint,
+
+      options
+
+    );
+
+    let data;
+
+    try {
+
+      data = await response.json();
+
+    } catch (error) {
+
+      throw new Error(
+
+        "The server returned an invalid response."
+
+      );
+
+    }
+
+    if (!response.ok) {
+
+      throw new Error(
+
+        data.error ||
+
+        "Something went wrong."
+
+      );
+
+    }
+
+    return data;
+
+  }
+
+  // ======================================================
+
+  // NAVIGATION
+
+  // ======================================================
+
+  function showSection(section) {
+
+    const sections = [
+
+      "traveler",
+
+      "business",
+
+      "admin"
+
+    ];
+
+    sections.forEach(
+
+      name => {
+
+        const element =
+
+          document.getElementById(name);
+
+        element.style.display =
+
+          name === section
+
+            ? "block"
+
+            : "none";
+
+      }
+
+    );
+
+    if (section === "traveler") {
+
+      loadExperiences();
+
+    }
+
+    if (section === "admin") {
+
+      loadAdmin();
+
+    }
+
+  }
+
+  // ======================================================
+
+  // LOAD EXPERIENCES
+
+  // ======================================================
+
+  async function loadExperiences() {
+
+    const container =
+
+      document.getElementById(
+
+        "experienceList"
+
+      );
+
+    container.innerHTML =
+
+      "Loading experiences...";
+
+    try {
+
+      experiences =
+
+        await api(
+
+          "/api/experiences"
+
+        );
+
+      renderExperiences(
+
+        experiences
+
+      );
+
+    } catch (error) {
+
+      container.innerHTML =
+
+        `<div class="card">
+
+          Unable to load experiences.
+
+          ${escapeHtml(error.message)}
+
+        </div>`;
+
+    }
+
+  }
+
+  // ======================================================
+
+  // RENDER EXPERIENCES
+
+  // ======================================================
+
+  function renderExperiences(list) {
+
+    const container =
+
+      document.getElementById(
+
+        "experienceList"
+
+      );
+
+    if (!list.length) {
+
+      container.innerHTML =
+
+        `<div class="card">
+
+          No live experiences are available right now.
+
+        </div>`;
+
+      return;
+
+    }
+
+    container.innerHTML =
+
+      list.map(
+
+        experience => {
+
+          const safeId =
+
+            escapeHtml(
+
+              experience.id
+
+            );
+
+          return `
+
+            <article class="card experience-card">
+
+              <div>
+
+                <span class="pill">
+
+                  ${escapeHtml(
+
+                    experience.category
+
+                  )}
+
+                </span>
+
+                ${
+
+                  experience.spots <= 3
+
+                    ? `
+
+                      <span class="pill spots">
+
+                        ${experience.spots}
+
+                        spots left
+
+                      </span>
+
+                    `
+
+                    : ""
+
+                }
+
+              </div>
+
+              <h3>
+
+                ${escapeHtml(
+
+                  experience.title
+
+                )}
+
+              </h3>
+
+              <p class="muted">
+
+                ${escapeHtml(
+
+                  experience.description
+
+                )}
+
+              </p>
+
+              <div class="meta">
+
+                📍
+
+                ${escapeHtml(
+
+                  experience.location
+
+                )}
+
+                <br>
+
+                🕒
+
+                ${escapeHtml(
+
+                  experience.starts_at
+
+                )}
+
+                <br>
+
+                ⏱
+
+                ${experience.duration_min}
+
+                minutes
+
+                <br>
+
+                🏪
+
+                ${escapeHtml(
+
+                  experience.business
+
+                )}
+
+              </div>
+
+              <div class="bottom">
+
+                <div class="price">
+
+                  $${Number(
+
+                    experience.price
+
+                  ).toFixed(2)}
+
+                </div>
+
+                <button
+
+                  class="button"
+
+                  onclick="openBooking('${safeId}')"
+
+                  ${
+
+                    experience.spots <= 0
+
+                      ? "disabled"
+
+                      : ""
+
+                  }
+
+                >
+
+                  Book
+
+                </button>
+
+              </div>
+
+            </article>
+
+          `;
+
+        }
+
+      ).join("");
+
+  }
+
+  // ======================================================
+
+  // AI HOST
+
+  // ======================================================
+
+  async function askAI() {
+
+    const prompt =
+
+      document.getElementById(
+
+        "aiPrompt"
+
+      ).value.trim();
+
+    const budget =
+
+      document.getElementById(
+
+        "aiBudget"
+
+      ).value;
+
+    const responseBox =
+
+      document.getElementById(
+
+        "aiResponse"
+
+      );
+
+    const button =
+
+      document.getElementById(
+
+        "askButton"
+
+      );
+
+    if (!prompt) {
+
+      responseBox.className =
+
+        "notice error";
+
+      responseBox.textContent =
+
+        "Tell me what kind of Guam experience you want.";
+
+      return;
+
+    }
+
+    button.disabled = true;
+
+    button.textContent =
+
+      "Thinking...";
+
+    responseBox.className =
+
+      "notice";
+
+    responseBox.textContent =
+
+      "Your AI Host is finding the best matches...";
+
+    try {
+
+      const result =
+
+        await api(
+
+          "/api/recommend",
+
+          {
+
+            method: "POST",
+
+            headers: {
+
+              "Content-Type":
+
+                "application/json"
+
+            },
+
+            body: JSON.stringify({
+
+              message: prompt,
+
+              budget:
+
+                budget || null
+
+            })
+
+          }
+
+        );
+
+      responseBox.textContent =
+
+        result.answer;
+
+      renderExperiences(
+
+        result.recommendations
+
+      );
+
+      document
+
+        .getElementById(
+
+          "experienceList"
+
+        )
+
+        .scrollIntoView({
+
+          behavior: "smooth",
+
+          block: "start"
+
+        });
+
+    } catch (error) {
+
+      responseBox.className =
+
+        "notice error";
+
+      responseBox.textContent =
+
+        error.message;
+
+    } finally {
+
+      button.disabled = false;
+
+      button.textContent =
+
+        "Ask AI Host";
+
+    }
+
+  }
+
+  // ======================================================
+
+  // BOOKING MODAL
+
+  // ======================================================
+
+  function openBooking(id) {
+
+    selectedExperience =
+
+      experiences.find(
+
+        experience =>
+
+          experience.id === id
+
+      );
+
+    if (!selectedExperience) {
+
+      return;
+
+    }
+
+    document.getElementById(
+
+      "bookingExperience"
+
+    ).innerHTML = `
+
+      <strong>
+
+        ${escapeHtml(
+
+          selectedExperience.title
+
+        )}
+
+      </strong>
+
+      <br>
+
+      $${Number(
+
+        selectedExperience.price
+
+      ).toFixed(2)}
+
+      per person
+
+      <br>
+
+      ${escapeHtml(
+
+        selectedExperience.starts_at
+
+      )}
+
+    `;
+
+    document.getElementById(
+
+      "travelerName"
+
+    ).value = "";
+
+    document.getElementById(
+
+      "travelerEmail"
+
+    ).value = "";
+
+    document.getElementById(
+
+      "travelerQuantity"
+
+    ).value = "1";
+
+    document.getElementById(
+
+      "bookingMessage"
+
+    ).innerHTML = "";
+
+    document.getElementById(
+
+      "bookingModal"
+
+    ).style.display = "flex";
+
+  }
+
+  function closeBooking() {
+
+    document.getElementById(
+
+      "bookingModal"
+
+    ).style.display = "none";
+
+    selectedExperience =
+
+      null;
+
+  }
+
+  // ======================================================
+
+  // COMPLETE BOOKING
+
+  // ======================================================
+
+  async function completeBooking() {
+
+    if (!selectedExperience) {
+
+      return;
+
+    }
+
+    const name =
+
+      document.getElementById(
+
+        "travelerName"
+
+      ).value.trim();
+
+    const email =
+
+      document.getElementById(
+
+        "travelerEmail"
+
+      ).value.trim();
+
+    const language =
+
+      document.getElementById(
+
+        "travelerLanguage"
+
+      ).value;
+
+    const quantity =
+
+      Number(
+
+        document.getElementById(
+
+          "travelerQuantity"
+
+        ).value
+
+      );
+
+    const message =
+
+      document.getElementById(
+
+        "bookingMessage"
+
+      );
+
+    if (!name) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        "Please enter your name.";
+
+      return;
+
+    }
+
+    if (!email.includes("@")) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        "Please enter a valid email.";
+
+      return;
+
+    }
+
+    if (
+
+      !Number.isInteger(quantity) ||
+
+      quantity < 1
+
+    ) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        "Please enter a valid quantity.";
+
+      return;
+
+    }
+
+    try {
+
+      const result =
+
+        await api(
+
+          "/api/bookings",
+
+          {
+
+            method: "POST",
+
+            headers: {
+
+              "Content-Type":
+
+                "application/json"
+
+            },
+
+            body: JSON.stringify({
+
+              experience_id:
+
+                selectedExperience.id,
+
+              qty:
+
+                quantity,
+
+              name:
+
+                name,
+
+              email:
+
+                email,
+
+              language:
+
+                language,
+
+              budget:
+
+                document.getElementById(
+
+                  "aiBudget"
+
+                ).value,
+
+              interests:
+
+                document.getElementById(
+
+                  "aiPrompt"
+
+                ).value
+
+            })
+
+          }
+
+        );
+
+      message.className =
+
+        "notice success";
+
+      message.innerHTML = `
+
+        <strong>
+
+          Booking confirmed!
+
+        </strong>
+
+        <br>
+
+        Confirmation:
+
+        ${escapeHtml(
+
+          result.confirmation
+
+        )}
+
+        <br>
+
+        Total:
+
+        $${Number(
+
+          result.total
+
+        ).toFixed(2)}
+
+      `;
+
+      await loadExperiences();
+
+      setTimeout(
+
+        closeBooking,
+
+        2500
+
+      );
+
+    } catch (error) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        error.message;
+
+    }
+
+  }
+
+  // ======================================================
+
+  // BUSINESS PORTAL
+
+  // ======================================================
+
+  async function publishExperience() {
+
+    const message =
+
+      document.getElementById(
+
+        "publishMessage"
+
+      );
+
+    const data = {
+
+      business:
+
+        document.getElementById(
+
+          "businessName"
+
+        ).value.trim(),
+
+      title:
+
+        document.getElementById(
+
+          "businessTitle"
+
+        ).value.trim(),
+
+      category:
+
+        document.getElementById(
+
+          "businessCategory"
+
+        ).value,
+
+      description:
+
+        document.getElementById(
+
+          "businessDescription"
+
+        ).value.trim(),
+
+      price:
+
+        document.getElementById(
+
+          "businessPrice"
+
+        ).value,
+
+      starts_at:
+
+        document.getElementById(
+
+          "businessStart"
+
+        ).value.trim(),
+
+      duration_min:
+
+        document.getElementById(
+
+          "businessDuration"
+
+        ).value,
+
+      spots:
+
+        document.getElementById(
+
+          "businessSpots"
+
+        ).value,
+
+      location:
+
+        document.getElementById(
+
+          "businessLocation"
+
+        ).value.trim(),
+
+      tags:
+
+        document.getElementById(
+
+          "businessTags"
+
+        ).value.trim()
+
+    };
+
+    if (
+
+      !data.business ||
+
+      !data.title ||
+
+      !data.description ||
+
+      !data.location
+
+    ) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        "Please complete the required fields.";
+
+      return;
+
+    }
+
+    try {
+
+      const result =
+
+        await api(
+
+          "/api/experiences",
+
+          {
+
+            method: "POST",
+
+            headers: {
+
+              "Content-Type":
+
+                "application/json"
+
+            },
+
+            body:
+
+              JSON.stringify(data)
+
+          }
+
+        );
+
+      message.className =
+
+        "notice success";
+
+      message.textContent =
+
+        "Live offer published successfully.";
+
+      document.getElementById(
+
+        "businessTitle"
+
+      ).value = "";
+
+      document.getElementById(
+
+        "businessDescription"
+
+      ).value = "";
+
+      document.getElementById(
+
+        "businessTags"
+
+      ).value = "";
+
+    } catch (error) {
+
+      message.className =
+
+        "notice error";
+
+      message.textContent =
+
+        error.message;
+
+    }
+
+  }
+
+  // ======================================================
+
+  // ADMIN
+
+  // ======================================================
+
+  async function loadAdmin() {
+
+    const stats =
+
+      document.getElementById(
+
+        "stats"
+
+      );
+
+    const bookings =
+
+      document.getElementById(
+
+        "bookingList"
+
+      );
+
+    try {
+
+      const data =
+
+        await api(
+
+          "/api/stats"
+
+        );
+
+      stats.innerHTML = `
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            Travelers
+
+          </div>
+
+          <div class="stat-number">
+
+            ${data.travelers}
+
+          </div>
+
+        </div>
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            Bookings
+
+          </div>
+
+          <div class="stat-number">
+
+            ${data.bookings}
+
+          </div>
+
+        </div>
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            GMV
+
+          </div>
+
+          <div class="stat-number">
+
+            $${Number(
+
+              data.gmv
+
+            ).toFixed(2)}
+
+          </div>
+
+        </div>
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            Live Offers
+
+          </div>
+
+          <div class="stat-number">
+
+            ${data.live_offers}
+
+          </div>
+
+        </div>
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            Businesses
+
+          </div>
+
+          <div class="stat-number">
+
+            ${data.businesses}
+
+          </div>
+
+        </div>
+
+        <div class="card stat">
+
+          <div class="muted">
+
+            Est. Commission
+
+          </div>
+
+          <div class="stat-number">
+
+            $${Number(
+
+              data.estimated_commission
+
+            ).toFixed(2)}
+
+          </div>
+
+        </div>
+
+      `;
+
+      const bookingData =
+
+        await api(
+
+          "/api/bookings"
+
+        );
+
+      if (!bookingData.length) {
+
+        bookings.innerHTML =
+
+          `<div class="card">
+
+            No bookings yet.
+
+          </div>`;
+
+        return;
+
+      }
+
+      bookings.innerHTML =
+
+        bookingData
+
+          .slice(0, 20)
+
+          .map(
+
+            booking => `
+
+              <div class="card">
+
+                <span class="pill">
+
+                  Confirmed
+
+                </span>
+
+                <h3>
+
+                  ${escapeHtml(
+
+                    booking.confirmation
+
+                  )}
+
+                </h3>
+
+                <strong>
+
+                  ${escapeHtml(
+
+                    booking.title
+
+                  )}
+
+                </strong>
+
+                <p class="muted">
+
+                  Traveler:
+
+                  ${escapeHtml(
+
+                    booking.name
+
+                  )}
+
+                  <br>
+
+                  Language:
+
+                  ${escapeHtml(
+
+                    booking.language
+
+                  )}
+
+                  <br>
+
+                  Quantity:
+
+                  ${booking.qty}
+
+                  <br>
+
+                  Total:
+
+                  $${Number(
+
+                    booking.total
+
+                  ).toFixed(2)}
+
+                </p>
+
+              </div>
+
+            `
+
+          )
+
+          .join("");
+
+    } catch (error) {
+
+      stats.innerHTML =
+
+        `<div class="card">
+
+          ${escapeHtml(
+
+            error.message
+
+          )}
+
+        </div>`;
+
+      bookings.innerHTML = "";
+
+    }
+
+  }
+
+  // ======================================================
+
+  // SECURITY HELPER
+
+  // ======================================================
+
+  function escapeHtml(value) {
+
+    return String(
+
+      value ?? ""
+
+    )
+
+      .replaceAll(
+
+        "&",
+
+        "&amp;"
+
+      )
+
+      .replaceAll(
+
+        "<",
+
+        "&lt;"
+
+      )
+
+      .replaceAll(
+
+        ">",
+
+        "&gt;"
+
+      )
+
+      .replaceAll(
+
+        '"',
+
+        "&quot;"
+
+      )
+
+      .replaceAll(
+
+        "'",
+
+        "&#039;"
+
+      );
+
+  }
+
+  // ======================================================
+
+  // INITIALIZE
+
+  // ======================================================
+
+  document.addEventListener(
+
+    "DOMContentLoaded",
+
+    () => {
+
+      loadExperiences();
+
+    }
+
+  );
+
+  // Close modal when clicking outside it
+
+  document
+
+    .getElementById(
+
+      "bookingModal"
+
+    )
+
+    .addEventListener(
+
+      "click",
+
+      event => {
+
+        if (
+
+          event.target.id ===
+
+          "bookingModal"
+
+        ) {
+
+          closeBooking();
+
+        }
+
+      }
+
+    );
+
+</script>
+
+</body>
+
+</html>
