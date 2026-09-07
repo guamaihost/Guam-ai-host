@@ -1,719 +1,334 @@
-if _name_ == "_main_": import os
-
-    seed()
-
-    host = "0.0.0.0"
-
-    port = int(os.environ.get("PORT", "8000"))
-
-    print(f"Guam AI Host V4 running on {host}:{port}")
-
-    ThreadingHTTPServer((host, port), Handler).serve_forever()
 import os
 
 import json
 
 import sqlite3
 
-import uuid
-
-from datetime import datetime
-
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from pathlib import Path
-
 from urllib.parse import urlparse
-
-BASE = Path(_file_).resolve().parent
-
-DB = BASE / "guam_host_v4.db"
-
-STATIC = BASE / "static"
 
 HOST = "0.0.0.0"
 
 PORT = int(os.environ.get("PORT", "8000"))
 
-# ============================================================
+DB_FILE = "guam_host_v4.db"
+
+STATIC_DIR = "static"
+
+# ---------------------------------------------------------
 
 # DATABASE
 
-# ============================================================
-
-SCHEMA = """
-
-CREATE TABLE IF NOT EXISTS experiences (
-
-    id TEXT PRIMARY KEY,
-
-    business TEXT NOT NULL,
-
-    title TEXT NOT NULL,
-
-    category TEXT NOT NULL,
-
-    description TEXT NOT NULL,
-
-    price REAL NOT NULL,
-
-    starts_at TEXT NOT NULL,
-
-    duration_min INTEGER NOT NULL,
-
-    spots INTEGER NOT NULL,
-
-    location TEXT NOT NULL,
-
-    tags TEXT NOT NULL,
-
-    active INTEGER NOT NULL DEFAULT 1,
-
-    created_at TEXT NOT NULL
-
-);
-
-CREATE TABLE IF NOT EXISTS travelers (
-
-    id TEXT PRIMARY KEY,
-
-    name TEXT NOT NULL,
-
-    email TEXT NOT NULL,
-
-    language TEXT NOT NULL,
-
-    budget REAL,
-
-    interests TEXT,
-
-    created_at TEXT NOT NULL
-
-);
-
-CREATE TABLE IF NOT EXISTS bookings (
-
-    id TEXT PRIMARY KEY,
-
-    confirmation TEXT UNIQUE NOT NULL,
-
-    experience_id TEXT NOT NULL,
-
-    traveler_id TEXT NOT NULL,
-
-    qty INTEGER NOT NULL,
-
-    total REAL NOT NULL,
-
-    status TEXT NOT NULL,
-
-    created_at TEXT NOT NULL
-
-);
-
-"""
-
-# ============================================================
-
-# SEED DATA
-
-# ============================================================
-
-SEED = [
-
-    (
-
-        "Sunset Beach Escape",
-
-        "Tumon Sunset Tours",
-
-        "beach",
-
-        "Private sunset beach experience with a local host.",
-
-        59,
-
-        "2026-09-07 16:15",
-
-        90,
-
-        8,
-
-        "Tumon",
-
-        "romantic,beach,sunset,photo",
-
-    ),
-
-    (
-
-        "Guam Food & Shopping Night",
-
-        "Island Food Co.",
-
-        "food",
-
-        "Local food tasting followed by a curated shopping stop.",
-
-        42,
-
-        "2026-09-07 18:00",
-
-        120,
-
-        12,
-
-        "Tumon",
-
-        "food,shopping,local,korean,japanese",
-
-    ),
-
-    (
-
-        "Ocean Adventure",
-
-        "Guam Ocean Club",
-
-        "ocean",
-
-        "Guided ocean adventure with reef viewing and water time.",
-
-        75,
-
-        "2026-09-07 13:30",
-
-        150,
-
-        6,
-
-        "Hagåtña",
-
-        "ocean,adventure,family",
-
-    ),
-
-    (
-
-        "Island Reset Spa",
-
-        "Island Reset Spa",
-
-        "wellness",
-
-        "Relaxing island spa session designed for travelers.",
-
-        69,
-
-        "2026-09-07 15:30",
-
-        90,
-
-        3,
-
-        "Tumon",
-
-        "wellness,spa,relax,romantic",
-
-    ),
-
-    (
-
-        "Guam Couple Photo Walk",
-
-        "Guam Photo Co.",
-
-        "photo",
-
-        "Local photographer captures a couple around scenic Guam spots.",
-
-        99,
-
-        "2026-09-07 17:00",
-
-        75,
-
-        2,
-
-        "Two Lovers Point",
-
-        "photo,romantic,couple,sunset",
-
-    ),
-
-    (
-
-        "Secret Beach Picnic",
-
-        "Local Guam Experiences",
-
-        "beach",
-
-        "Small-group picnic at a quiet coastal location.",
-
-        79,
-
-        "2026-09-07 11:00",
-
-        120,
-
-        4,
-
-        "West Guam",
-
-        "beach,picnic,romantic,quiet",
-
-    ),
-
-]
-
-# ============================================================
-
-# DATABASE HELPERS
-
-# ============================================================
+# ---------------------------------------------------------
 
 def get_db():
 
-    connection = sqlite3.connect(DB)
+    conn = sqlite3.connect(DB_FILE)
 
-    connection.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row
 
-    connection.execute("PRAGMA foreign_keys = ON")
+    return conn
 
-    connection.executescript(SCHEMA)
+def init_db():
 
-    return connection
+    conn = get_db()
 
-def seed_database():
+    conn.execute("""
 
-    connection = get_db()
+        CREATE TABLE IF NOT EXISTS experiences (
 
-    count = connection.execute(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        "SELECT COUNT(*) FROM experiences"
+            title TEXT NOT NULL,
 
-    ).fetchone()[0]
+            business TEXT NOT NULL,
+
+            category TEXT NOT NULL,
+
+            price REAL NOT NULL,
+
+            start_time TEXT NOT NULL,
+
+            duration_minutes INTEGER NOT NULL,
+
+            spots INTEGER NOT NULL,
+
+            location TEXT NOT NULL,
+
+            description TEXT DEFAULT ''
+
+        )
+
+    """)
+
+    conn.execute("""
+
+        CREATE TABLE IF NOT EXISTS travelers (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            name TEXT NOT NULL,
+
+            email TEXT DEFAULT '',
+
+            language TEXT DEFAULT 'English'
+
+        )
+
+    """)
+
+    conn.execute("""
+
+        CREATE TABLE IF NOT EXISTS bookings (
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            booking_code TEXT UNIQUE NOT NULL,
+
+            experience_id INTEGER NOT NULL,
+
+            traveler_name TEXT NOT NULL,
+
+            traveler_email TEXT DEFAULT '',
+
+            language TEXT DEFAULT 'English',
+
+            quantity INTEGER NOT NULL,
+
+            total REAL NOT NULL,
+
+            status TEXT DEFAULT 'confirmed',
+
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (experience_id) REFERENCES experiences(id)
+
+        )
+
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+def seed():
+
+    conn = get_db()
+
+    count = conn.execute(
+
+        "SELECT COUNT(*) AS count FROM experiences"
+
+    ).fetchone()["count"]
 
     if count == 0:
 
-        now = datetime.utcnow().isoformat()
+        experiences = [
 
-        for (
+            (
 
-            title,
+                "Sunset Beach Escape",
 
-            business,
+                "Tumon Sunset Tours",
 
-            category,
+                "beach",
 
-            description,
+                59,
 
-            price,
+                "2026-09-07 16:15",
 
-            starts_at,
+                90,
 
-            duration_min,
+                8,
 
-            spots,
+                "Tumon",
 
-            location,
+                "Relax on Guam's coast and enjoy a beautiful sunset."
 
-            tags,
+            ),
 
-        ) in SEED:
+            (
 
-            connection.execute(
+                "Guam Food & Shopping Night",
 
-                """
+                "Island Food Co.",
 
-                INSERT INTO experiences (
+                "food",
 
-                    id,
+                42,
 
-                    business,
+                "2026-09-07 18:00",
 
-                    title,
+                120,
 
-                    category,
+                12,
 
-                    description,
+                "Tumon",
 
-                    price,
+                "Local food, shopping and an easy evening experience."
 
-                    starts_at,
+            ),
 
-                    duration_min,
+            (
 
-                    spots,
+                "Ocean Adventure",
 
-                    location,
+                "Guam Ocean Club",
 
-                    tags,
+                "ocean",
 
-                    created_at
+                75,
 
-                )
+                "2026-09-07 13:30",
 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                150,
 
-                """,
+                6,
 
-                (
+                "Hagåtña",
 
-                    str(uuid.uuid4()),
+                "A fun ocean experience for travelers looking for adventure."
 
-                    business,
+            ),
 
-                    title,
+            (
 
-                    category,
+                "Island Reset Spa",
 
-                    description,
+                "Island Reset Spa",
 
-                    price,
+                "wellness",
 
-                    starts_at,
+                69,
 
-                    duration_min,
+                "2026-09-07 15:30",
 
-                    spots,
+                90,
 
-                    location,
+                3,
 
-                    tags,
+                "Tumon",
 
-                    now,
+                "Relax and recharge with a Guam wellness experience."
 
-                ),
+            ),
+
+            (
+
+                "Guam Couple Photo Walk",
+
+                "Guam Photo Co.",
+
+                "photo",
+
+                99,
+
+                "2026-09-07 17:00",
+
+                75,
+
+                2,
+
+                "Two Lovers Point",
+
+                "A private photo walk for couples and special trips."
+
+            ),
+
+            (
+
+                "Secret Beach Picnic",
+
+                "Local Guam Experiences",
+
+                "beach",
+
+                79,
+
+                "2026-09-07 11:00",
+
+                120,
+
+                4,
+
+                "West Guam",
+
+                "A relaxed private picnic experience away from the crowds."
 
             )
 
-        connection.commit()
-
-    connection.close()
-
-def fetch_rows(sql, parameters=()):
-
-    connection = get_db()
-
-    results = [
-
-        dict(row)
-
-        for row in connection.execute(sql, parameters).fetchall()
-
-    ]
-
-    connection.close()
-
-    return results
-
-# ============================================================
-
-# AI-STYLE RECOMMENDATION ENGINE
-
-# ============================================================
-
-def score_experience(experience, user_message, budget=None):
-
-    searchable_text = " ".join(
-
-        [
-
-            experience["title"],
-
-            experience["description"],
-
-            experience["category"],
-
-            experience["location"],
-
-            experience["tags"],
-
         ]
 
-    ).lower()
+        conn.executemany("""
 
-    words = [
+            INSERT INTO experiences
 
-        word.strip(".,!?;:")
+            (
 
-        for word in user_message.lower().split()
+                title,
 
-        if len(word) > 2
+                business,
 
-    ]
+                category,
 
-    score = 0
+                price,
 
-    # Direct keyword matching
+                start_time,
 
-    for word in words:
+                duration_minutes,
 
-        if word in searchable_text:
+                spots,
 
-            score += 2
+                location,
 
-    # Intent groups
-
-    intent_groups = {
-
-        "romantic": [
-
-            "romantic",
-
-            "couple",
-
-            "date",
-
-            "sunset",
-
-            "photo",
-
-            "quiet",
-
-        ],
-
-        "family": [
-
-            "family",
-
-            "kid",
-
-            "kids",
-
-            "children",
-
-        ],
-
-        "food": [
-
-            "food",
-
-            "eat",
-
-            "eating",
-
-            "dinner",
-
-            "lunch",
-
-            "restaurant",
-
-            "shopping",
-
-        ],
-
-        "adventure": [
-
-            "adventure",
-
-            "ocean",
-
-            "active",
-
-            "water",
-
-            "reef",
-
-        ],
-
-        "relax": [
-
-            "spa",
-
-            "relax",
-
-            "wellness",
-
-            "massage",
-
-        ],
-
-        "beach": [
-
-            "beach",
-
-            "ocean",
-
-            "sunset",
-
-            "coast",
-
-        ],
-
-    }
-
-    message = user_message.lower()
-
-    for intent, keywords in intent_groups.items():
-
-        if intent in message:
-
-            for keyword in keywords:
-
-                if keyword in searchable_text:
-
-                    score += 2
-
-    # Budget scoring
-
-    if budget is not None:
-
-        if experience["price"] <= budget:
-
-            score += 5
-
-        elif experience["price"] <= budget * 1.25:
-
-            score += 1
-
-        else:
-
-            score -= 5
-
-    # Inventory bonus
-
-    if experience["spots"] > 0:
-
-        score += 1
-
-    return score
-
-def generate_recommendations(message, budget=None):
-
-    experiences = fetch_rows(
-
-        """
-
-        SELECT *
-
-        FROM experiences
-
-        WHERE active = 1
-
-        AND spots > 0
-
-        """
-
-    )
-
-    ranked = sorted(
-
-        experiences,
-
-        key=lambda experience: score_experience(
-
-            experience,
-
-            message,
-
-            budget,
-
-        ),
-
-        reverse=True,
-
-    )
-
-    # Keep recommendations reasonably close to budget
-
-    if budget is not None:
-
-        filtered = [
-
-            experience
-
-            for experience in ranked
-
-            if experience["price"] <= budget * 1.25
-
-        ]
-
-        if filtered:
-
-            ranked = filtered
-
-    return ranked[:4]
-
-# ============================================================
-
-# HTTP HANDLER
-
-# ============================================================
-
-class GuamAIHostHandler(BaseHTTPRequestHandler):
-
-    server_version = "GuamAIHost/4.0"
-
-    # --------------------------------------------------------
-
-    # JSON RESPONSE
-
-    # --------------------------------------------------------
-
-    def send_json(self, data, status=200):
-
-        response = json.dumps(
-
-            data,
-
-            ensure_ascii=False,
-
-        ).encode("utf-8")
-
-        self.send_response(status)
-
-        self.send_header(
-
-            "Content-Type",
-
-            "application/json; charset=utf-8",
-
-        )
-
-        self.send_header(
-
-            "Content-Length",
-
-            str(len(response)),
-
-        )
-
-        self.send_header(
-
-            "Access-Control-Allow-Origin",
-
-            "*",
-
-        )
-
-        self.end_headers()
-
-        self.wfile.write(response)
-
-    # --------------------------------------------------------
-
-    # REQUEST BODY
-
-    # --------------------------------------------------------
-
-    def get_json_body(self):
-
-        length = int(
-
-            self.headers.get(
-
-                "Content-Length",
-
-                "0",
+                description
 
             )
 
-        )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 
-        raw = self.rfile.read(length)
+        """, experiences)
+
+        conn.commit()
+
+    conn.close()
+
+# ---------------------------------------------------------
+
+# HELPERS
+
+# ---------------------------------------------------------
+
+def json_response(handler, data, status=200):
+
+    body = json.dumps(
+
+        data,
+
+        ensure_ascii=False
+
+    ).encode("utf-8")
+
+    handler.send_response(status)
+
+    handler.send_header("Content-Type", "application/json; charset=utf-8")
+
+    handler.send_header("Content-Length", str(len(body)))
+
+    handler.send_header("Access-Control-Allow-Origin", "*")
+
+    handler.end_headers()
+
+    handler.wfile.write(body)
+
+def read_json(handler):
+
+    try:
+
+        length = int(handler.headers.get("Content-Length", "0"))
+
+        raw = handler.rfile.read(length)
 
         if not raw:
 
@@ -721,31 +336,219 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
         return json.loads(raw.decode("utf-8"))
 
-    # --------------------------------------------------------
+    except Exception:
 
-    # GET
+        return {}
 
-    # --------------------------------------------------------
+def make_booking_code():
+
+    import random
+
+    import string
+
+    letters = string.ascii_uppercase + string.digits
+
+    return "GUAM-" + "".join(
+
+        random.choice(letters) for _ in range(6)
+
+    )
+
+def row_to_dict(row):
+
+    return dict(row)
+
+# ---------------------------------------------------------
+
+# RECOMMENDATION ENGINE
+
+# ---------------------------------------------------------
+
+def recommend_experiences(message, budget=None):
+
+    conn = get_db()
+
+    rows = conn.execute("""
+
+        SELECT *
+
+        FROM experiences
+
+        WHERE spots > 0
+
+        ORDER BY start_time
+
+    """).fetchall()
+
+    conn.close()
+
+    text = (message or "").lower()
+
+    scored = []
+
+    keyword_map = {
+
+        "beach": ["beach", "ocean", "sunset", "海", "ビーチ", "바다", "해변"],
+
+        "food": ["food", "eat", "restaurant", "shopping", "食", "グルメ", "맛집", "쇼핑"],
+
+        "ocean": ["ocean", "water", "adventure", "snorkel", "海", "アクティビティ", "바다"],
+
+        "wellness": ["spa", "relax", "wellness", "massage", "スパ", "휴식", "스파"],
+
+        "photo": ["photo", "couple", "romantic", "사진", "写真", "커플"],
+
+    }
+
+    for row in rows:
+
+        score = 0
+
+        category = row["category"]
+
+        if category in keyword_map:
+
+            for keyword in keyword_map[category]:
+
+                if keyword in text:
+
+                    score += 3
+
+        if "cheap" in text or "budget" in text or "저렴" in text or "安い" in text:
+
+            if row["price"] <= 60:
+
+                score += 2
+
+        if "romantic" in text or "couple" in text or "date" in text:
+
+            if category == "photo":
+
+                score += 5
+
+        if "relax" in text or "relaxing" in text:
+
+            if category == "wellness":
+
+                score += 5
+
+        if "food" in text or "eat" in text or "dinner" in text:
+
+            if category == "food":
+
+                score += 5
+
+        if "beach" in text or "sunset" in text:
+
+            if category == "beach":
+
+                score += 5
+
+        if "adventure" in text or "ocean" in text:
+
+            if category == "ocean":
+
+                score += 5
+
+        if budget is not None:
+
+            try:
+
+                if float(row["price"]) <= float(budget):
+
+                    score += 2
+
+                else:
+
+                    score -= 2
+
+            except Exception:
+
+                pass
+
+        scored.append((score, row))
+
+    scored.sort(
+
+        key=lambda item: (
+
+            -item[0],
+
+            item[1]["price"]
+
+        )
+
+    )
+
+    return [
+
+        row_to_dict(row)
+
+        for score, row in scored[:5]
+
+    ]
+
+# ---------------------------------------------------------
+
+# HTTP HANDLER
+
+# ---------------------------------------------------------
+
+class GuamAIHostHandler(BaseHTTPRequestHandler):
+
+    def send_cors(self):
+
+        self.send_header(
+
+            "Access-Control-Allow-Origin",
+
+            "*"
+
+        )
+
+        self.send_header(
+
+            "Access-Control-Allow-Headers",
+
+            "Content-Type"
+
+        )
+
+        self.send_header(
+
+            "Access-Control-Allow-Methods",
+
+            "GET, POST, OPTIONS"
+
+        )
+
+    def do_OPTIONS(self):
+
+        self.send_response(204)
+
+        self.send_cors()
+
+        self.end_headers()
 
     def do_GET(self):
 
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
 
-        # Health check
+        path = parsed.path
 
         if path == "/api/health":
 
-            self.send_json(
+            json_response(
+
+                self,
 
                 {
 
-                    "ok": True,
+                    "status": "ok",
 
                     "service": "Guam AI Host",
 
-                    "version": "4.0",
-
-                    "time": datetime.utcnow().isoformat(),
+                    "version": "V4"
 
                 }
 
@@ -753,165 +556,235 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
             return
 
-        # Experiences
-
         if path == "/api/experiences":
 
-            experiences = fetch_rows(
-
-                """
-
-                SELECT *
-
-                FROM experiences
-
-                WHERE active = 1
-
-                ORDER BY starts_at
-
-                """
-
-            )
-
-            self.send_json(experiences)
+            self.get_experiences()
 
             return
-
-        # Businesses
 
         if path == "/api/businesses":
 
-            businesses = fetch_rows(
-
-                """
-
-                SELECT
-
-                    business,
-
-                    COUNT(*) AS experience_count
-
-                FROM experiences
-
-                WHERE active = 1
-
-                GROUP BY business
-
-                ORDER BY business
-
-                """
-
-            )
-
-            self.send_json(businesses)
+            self.get_businesses()
 
             return
-
-        # Bookings
 
         if path == "/api/bookings":
 
-            bookings = fetch_rows(
-
-                """
-
-                SELECT
-
-                    b.*,
-
-                    e.title,
-
-                    e.business,
-
-                    t.name,
-
-                    t.email,
-
-                    t.language
-
-                FROM bookings b
-
-                JOIN experiences e
-
-                    ON e.id = b.experience_id
-
-                JOIN travelers t
-
-                    ON t.id = b.traveler_id
-
-                ORDER BY b.created_at DESC
-
-                """
-
-            )
-
-            self.send_json(bookings)
+            self.get_bookings()
 
             return
 
-        # Dashboard statistics
-
         if path == "/api/stats":
 
-            connection = get_db()
+            self.get_stats()
 
-            travelers = connection.execute(
+            return
 
-                "SELECT COUNT(*) FROM travelers"
+        self.serve_static(path)
 
-            ).fetchone()[0]
+    def do_POST(self):
 
-            bookings = connection.execute(
+        parsed = urlparse(self.path)
 
-                "SELECT COUNT(*) FROM bookings"
+        path = parsed.path
 
-            ).fetchone()[0]
+        if path == "/api/recommend":
 
-            gmv = connection.execute(
+            self.recommend()
 
-                """
+            return
 
-                SELECT COALESCE(SUM(total), 0)
+        if path == "/api/experiences":
 
-                FROM bookings
+            self.create_experience()
 
-                WHERE status = 'confirmed'
+            return
 
-                """
+        if path == "/api/bookings":
 
-            ).fetchone()[0]
+            self.create_booking()
 
-            live_offers = connection.execute(
+            return
 
-                """
+        json_response(
 
-                SELECT COUNT(*)
+            self,
 
-                FROM experiences
+            {"error": "Not found"},
 
-                WHERE active = 1
+            404
 
-                AND spots > 0
+        )
 
-                """
+    # -----------------------------------------------------
 
-            ).fetchone()[0]
+    # API: EXPERIENCES
 
-            businesses = connection.execute(
+    # -----------------------------------------------------
 
-                """
+    def get_experiences(self):
 
-                SELECT COUNT(DISTINCT business)
+        conn = get_db()
 
-                FROM experiences
+        rows = conn.execute("""
 
-                """
+            SELECT *
 
-            ).fetchone()[0]
+            FROM experiences
 
-            connection.close()
+            ORDER BY start_time
 
-            stats = {
+        """).fetchall()
+
+        conn.close()
+
+        json_response(
+
+            self,
+
+            [row_to_dict(row) for row in rows]
+
+        )
+
+    # -----------------------------------------------------
+
+    # API: BUSINESSES
+
+    # -----------------------------------------------------
+
+    def get_businesses(self):
+
+        conn = get_db()
+
+        rows = conn.execute("""
+
+            SELECT
+
+                business,
+
+                COUNT(*) AS experiences,
+
+                SUM(spots) AS available_spots
+
+            FROM experiences
+
+            GROUP BY business
+
+            ORDER BY business
+
+        """).fetchall()
+
+        conn.close()
+
+        json_response(
+
+            self,
+
+            [row_to_dict(row) for row in rows]
+
+        )
+
+    # -----------------------------------------------------
+
+    # API: BOOKINGS
+
+    # -----------------------------------------------------
+
+    def get_bookings(self):
+
+        conn = get_db()
+
+        rows = conn.execute("""
+
+            SELECT
+
+                bookings.*,
+
+                experiences.title,
+
+                experiences.business
+
+            FROM bookings
+
+            JOIN experiences
+
+                ON experiences.id = bookings.experience_id
+
+            ORDER BY bookings.created_at DESC
+
+        """).fetchall()
+
+        conn.close()
+
+        json_response(
+
+            self,
+
+            [row_to_dict(row) for row in rows]
+
+        )
+
+    # -----------------------------------------------------
+
+    # API: STATS
+
+    # -----------------------------------------------------
+
+    def get_stats(self):
+
+        conn = get_db()
+
+        travelers = conn.execute("""
+
+            SELECT COUNT(DISTINCT traveler_email)
+
+            FROM bookings
+
+            WHERE traveler_email != ''
+
+        """).fetchone()[0]
+
+        bookings = conn.execute("""
+
+            SELECT COUNT(*)
+
+            FROM bookings
+
+        """).fetchone()[0]
+
+        gmv = conn.execute("""
+
+            SELECT COALESCE(SUM(total), 0)
+
+            FROM bookings
+
+            WHERE status = 'confirmed'
+
+        """).fetchone()[0]
+
+        businesses = conn.execute("""
+
+            SELECT COUNT(DISTINCT business)
+
+            FROM experiences
+
+        """).fetchone()[0]
+
+        available_spots = conn.execute("""
+
+            SELECT COALESCE(SUM(spots), 0)
+
+            FROM experiences
+
+        """).fetchone()[0]
+
+        conn.close()
+
+        json_response(
+
+            self,
+
+            {
 
                 "travelers": travelers,
 
@@ -919,465 +792,321 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
                 "gmv": round(float(gmv), 2),
 
-                "live_offers": live_offers,
-
                 "businesses": businesses,
 
-                "estimated_commission": round(
-
-                    float(gmv) * 0.15,
-
-                    2,
-
-                ),
+                "available_spots": available_spots
 
             }
 
-            self.send_json(stats)
+        )
+
+    # -----------------------------------------------------
+
+    # API: RECOMMEND
+
+    # -----------------------------------------------------
+
+    def recommend(self):
+
+        data = read_json(self)
+
+        message = data.get(
+
+            "message",
+
+            ""
+
+        )
+
+        budget = data.get(
+
+            "budget"
+
+        )
+
+        recommendations = recommend_experiences(
+
+            message,
+
+            budget
+
+        )
+
+        json_response(
+
+            self,
+
+            {
+
+                "message": message,
+
+                "recommendations": recommendations
+
+            }
+
+        )
+
+    # -----------------------------------------------------
+
+    # API: CREATE EXPERIENCE
+
+    # -----------------------------------------------------
+
+    def create_experience(self):
+
+        data = read_json(self)
+
+        required = [
+
+            "title",
+
+            "business",
+
+            "category",
+
+            "price",
+
+            "start_time",
+
+            "duration_minutes",
+
+            "spots",
+
+            "location"
+
+        ]
+
+        missing = [
+
+            field
+
+            for field in required
+
+            if field not in data
+
+        ]
+
+        if missing:
+
+            json_response(
+
+                self,
+
+                {
+
+                    "error": "Missing fields",
+
+                    "fields": missing
+
+                },
+
+                400
+
+            )
 
             return
-
-        # Static files
-
-        self.serve_static(path)
-
-    # --------------------------------------------------------
-
-    # POST
-
-    # --------------------------------------------------------
-
-    def do_POST(self):
-
-        path = urlparse(self.path).path
 
         try:
 
-            body = self.get_json_body()
+            price = float(data["price"])
+
+            duration = int(data["duration_minutes"])
+
+            spots = int(data["spots"])
+
+            if price < 0 or duration <= 0 or spots <= 0:
+
+                raise ValueError()
 
         except Exception:
 
-            self.send_json(
+            json_response(
+
+                self,
 
                 {
 
-                    "error": "Invalid JSON request"
+                    "error": "Invalid price, duration, or spots"
 
                 },
 
-                400,
+                400
 
             )
 
             return
 
-        # ----------------------------------------------------
+        conn = get_db()
 
-        # AI RECOMMENDATION
+        cursor = conn.execute("""
 
-        # ----------------------------------------------------
+            INSERT INTO experiences
 
-        if path == "/api/recommend":
+            (
 
-            message = str(
+                title,
 
-                body.get(
+                business,
 
-                    "message",
+                category,
 
-                    "",
+                price,
 
-                )
+                start_time,
 
-            ).strip()
+                duration_minutes,
 
-            if not message:
+                spots,
 
-                self.send_json(
+                location,
 
-                    {
-
-                        "error": "Please describe what you want to do."
-
-                    },
-
-                    400,
-
-                )
-
-                return
-
-            budget = body.get("budget")
-
-            try:
-
-                if budget not in (None, ""):
-
-                    budget = float(budget)
-
-                else:
-
-                    budget = None
-
-            except (ValueError, TypeError):
-
-                budget = None
-
-            recommendations = generate_recommendations(
-
-                message,
-
-                budget,
+                description
 
             )
 
-            answer = (
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 
-                "I found a few Guam experiences that match "
+        """, (
 
-                "what you're looking for."
+            str(data["title"]),
+
+            str(data["business"]),
+
+            str(data["category"]),
+
+            price,
+
+            str(data["start_time"]),
+
+            duration,
+
+            spots,
+
+            str(data["location"]),
+
+            str(data.get("description", ""))
+
+        ))
+
+        conn.commit()
+
+        experience_id = cursor.lastrowid
+
+        row = conn.execute("""
+
+            SELECT *
+
+            FROM experiences
+
+            WHERE id = ?
+
+        """, (experience_id,)).fetchone()
+
+        conn.close()
+
+        json_response(
+
+            self,
+
+            row_to_dict(row),
+
+            201
+
+        )
+
+    # -----------------------------------------------------
+
+    # API: CREATE BOOKING
+
+    # -----------------------------------------------------
+
+    def create_booking(self):
+
+        data = read_json(self)
+
+        try:
+
+            experience_id = int(
+
+                data["experience_id"]
 
             )
 
-            lowered = message.lower()
+            quantity = int(
 
-            if "rain" in lowered or "weather" in lowered:
-
-                answer += (
-
-                    " Because weather can change quickly, "
-
-                    "I'd keep a flexible backup activity."
-
-                )
-
-            if budget is not None:
-
-                answer += (
-
-                    f" I prioritized options around your "
-
-                    f"${budget:.0f} budget."
-
-                )
-
-            self.send_json(
-
-                {
-
-                    "answer": answer,
-
-                    "recommendations": recommendations,
-
-                }
+                data.get("quantity", 1)
 
             )
 
-            return
+            traveler_name = str(
 
-        # ----------------------------------------------------
+                data.get(
 
-        # CREATE EXPERIENCE
+                    "traveler_name",
 
-        # ----------------------------------------------------
-
-        if path == "/api/experiences":
-
-            required = [
-
-                "business",
-
-                "title",
-
-                "category",
-
-                "description",
-
-                "price",
-
-                "starts_at",
-
-                "duration_min",
-
-                "spots",
-
-                "location",
-
-            ]
-
-            missing = [
-
-                field
-
-                for field in required
-
-                if field not in body
-
-            ]
-
-            if missing:
-
-                self.send_json(
-
-                    {
-
-                        "error": "Missing fields",
-
-                        "fields": missing,
-
-                    },
-
-                    400,
+                    "Guest"
 
                 )
-
-                return
-
-            try:
-
-                price = float(body["price"])
-
-                duration = int(body["duration_min"])
-
-                spots = int(body["spots"])
-
-                if price < 0 or duration <= 0 or spots < 0:
-
-                    raise ValueError
-
-            except (ValueError, TypeError):
-
-                self.send_json(
-
-                    {
-
-                        "error": "Invalid price, duration or spots."
-
-                    },
-
-                    400,
-
-                )
-
-                return
-
-            experience_id = str(uuid.uuid4())
-
-            connection = get_db()
-
-            connection.execute(
-
-                """
-
-                INSERT INTO experiences (
-
-                    id,
-
-                    business,
-
-                    title,
-
-                    category,
-
-                    description,
-
-                    price,
-
-                    starts_at,
-
-                    duration_min,
-
-                    spots,
-
-                    location,
-
-                    tags,
-
-                    created_at
-
-                )
-
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
-                """,
-
-                (
-
-                    experience_id,
-
-                    str(body["business"]).strip(),
-
-                    str(body["title"]).strip(),
-
-                    str(body["category"]).strip(),
-
-                    str(body["description"]).strip(),
-
-                    price,
-
-                    str(body["starts_at"]).strip(),
-
-                    duration,
-
-                    spots,
-
-                    str(body["location"]).strip(),
-
-                    str(body.get("tags", "")).strip(),
-
-                    datetime.utcnow().isoformat(),
-
-                ),
 
             )
 
-            connection.commit()
+            traveler_email = str(
 
-            connection.close()
+                data.get(
 
-            self.send_json(
+                    "traveler_email",
 
-                {
-
-                    "ok": True,
-
-                    "id": experience_id,
-
-                    "message": "Experience published.",
-
-                },
-
-                201,
-
-            )
-
-            return
-
-        # ----------------------------------------------------
-
-        # BOOKING
-
-        # ----------------------------------------------------
-
-        if path == "/api/bookings":
-
-            experience_id = body.get(
-
-                "experience_id"
-
-            )
-
-            name = str(
-
-                body.get(
-
-                    "name",
-
-                    "",
+                    ""
 
                 )
 
-            ).strip()
-
-            email = str(
-
-                body.get(
-
-                    "email",
-
-                    "",
-
-                )
-
-            ).strip()
+            )
 
             language = str(
 
-                body.get(
+                data.get(
 
                     "language",
 
-                    "en",
+                    "English"
 
                 )
 
             )
 
-            try:
+            if quantity <= 0:
 
-                quantity = int(
+                raise ValueError()
 
-                    body.get(
+        except Exception:
 
-                        "qty",
+            json_response(
 
-                        1,
+                self,
 
-                    )
+                {
 
-                )
+                    "error": "Invalid booking information"
 
-            except (ValueError, TypeError):
+                },
 
-                self.send_json(
+                400
 
-                    {
+            )
 
-                        "error": "Invalid quantity."
+            return
 
-                    },
+        conn = get_db()
 
-                    400,
+        try:
 
-                )
+            # Prevent two simultaneous bookings
 
-                return
+            # from overselling the same inventory.
 
-            if (
+            conn.execute("BEGIN IMMEDIATE")
 
-                not experience_id
-
-                or not name
-
-                or "@" not in email
-
-                or quantity < 1
-
-            ):
-
-                self.send_json(
-
-                    {
-
-                        "error": (
-
-                            "Name, valid email, "
-
-                            "experience and quantity "
-
-                            "are required."
-
-                        )
-
-                    },
-
-                    400,
-
-                )
-
-                return
-
-            connection = get_db()
-
-            # Begin transaction so inventory isn't
-
-            # accidentally oversold in this prototype.
-
-            connection.execute("BEGIN IMMEDIATE")
-
-            experience = connection.execute(
-
-                """
+            experience = conn.execute("""
 
                 SELECT *
 
@@ -1385,29 +1114,23 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
                 WHERE id = ?
 
-                AND active = 1
+            """, (experience_id,)).fetchone()
 
-                """,
+            if experience is None:
 
-                (experience_id,),
+                conn.rollback()
 
-            ).fetchone()
+                json_response(
 
-            if not experience:
-
-                connection.rollback()
-
-                connection.close()
-
-                self.send_json(
+                    self,
 
                     {
 
-                        "error": "Experience unavailable."
+                        "error": "Experience not found"
 
                     },
 
-                    404,
+                    404
 
                 )
 
@@ -1415,95 +1138,83 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
             if experience["spots"] < quantity:
 
-                connection.rollback()
+                conn.rollback()
 
-                connection.close()
+                json_response(
 
-                self.send_json(
+                    self,
 
                     {
 
-                        "error": "Not enough spots available."
+                        "error": "Not enough spots available",
+
+                        "available": experience["spots"]
 
                     },
 
-                    409,
+                    409
 
                 )
 
                 return
 
-            traveler_id = str(uuid.uuid4())
-
-            booking_id = str(uuid.uuid4())
-
-            confirmation = (
-
-                "GAH-"
-
-                + uuid.uuid4().hex[:8].upper()
-
-            )
-
-            total = round(
+            total = (
 
                 float(experience["price"])
 
-                * quantity,
-
-                2,
+                * quantity
 
             )
 
-            connection.execute(
+            booking_code = make_booking_code()
 
-                """
+            conn.execute("""
 
-                INSERT INTO travelers (
-
-                    id,
-
-                    name,
-
-                    email,
-
-                    language,
-
-                    budget,
-
-                    interests,
-
-                    created_at
-
-                )
-
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-
-                """,
+                INSERT INTO bookings
 
                 (
 
-                    traveler_id,
+                    booking_code,
 
-                    name,
+                    experience_id,
 
-                    email,
+                    traveler_name,
+
+                    traveler_email,
 
                     language,
 
-                    body.get("budget"),
+                    quantity,
 
-                    body.get("interests", ""),
+                    total,
 
-                    datetime.utcnow().isoformat(),
+                    status
 
-                ),
+                )
 
-            )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 
-            connection.execute(
+            """, (
 
-                """
+                booking_code,
+
+                experience_id,
+
+                traveler_name,
+
+                traveler_email,
+
+                language,
+
+                quantity,
+
+                total,
+
+                "confirmed"
+
+            ))
+
+            conn.execute("""
 
                 UPDATE experiences
 
@@ -1511,169 +1222,121 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
                 WHERE id = ?
 
-                """,
+            """, (
 
-                (
+                quantity,
 
-                    quantity,
+                experience_id
 
-                    experience_id,
+            ))
 
-                ),
+            conn.commit()
 
-            )
+            remaining = experience["spots"] - quantity
 
-            connection.execute(
+            json_response(
 
-                """
-
-                INSERT INTO bookings (
-
-                    id,
-
-                    confirmation,
-
-                    experience_id,
-
-                    traveler_id,
-
-                    qty,
-
-                    total,
-
-                    status,
-
-                    created_at
-
-                )
-
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-
-                """,
-
-                (
-
-                    booking_id,
-
-                    confirmation,
-
-                    experience_id,
-
-                    traveler_id,
-
-                    quantity,
-
-                    total,
-
-                    "confirmed",
-
-                    datetime.utcnow().isoformat(),
-
-                ),
-
-            )
-
-            connection.commit()
-
-            connection.close()
-
-            self.send_json(
+                self,
 
                 {
 
-                    "ok": True,
+                    "success": True,
 
-                    "confirmation": confirmation,
+                    "booking_code": booking_code,
 
-                    "total": total,
+                    "experience": experience["title"],
 
-                    "currency": "USD",
+                    "quantity": quantity,
 
-                    "message": "Booking confirmed.",
+                    "total": round(total, 2),
+
+                    "remaining_spots": remaining,
+
+                    "language": language
 
                 },
 
-                201,
+                201
 
             )
 
-            return
+        except Exception as exc:
 
-        self.send_json(
+            conn.rollback()
 
-            {
+            json_response(
 
-                "error": "Endpoint not found."
+                self,
 
-            },
+                {
 
-            404,
+                    "error": "Booking failed",
 
-        )
+                    "details": str(exc)
 
-    # --------------------------------------------------------
+                },
 
-    # STATIC FILE SERVER
+                500
 
-    # --------------------------------------------------------
+            )
+
+        finally:
+
+            conn.close()
+
+    # -----------------------------------------------------
+
+    # STATIC FILES
+
+    # -----------------------------------------------------
 
     def serve_static(self, path):
 
         if path == "/":
 
-            relative = "index.html"
+            path = "/index.html"
 
-        else:
+        requested = path.lstrip("/")
 
-            relative = path.lstrip("/")
+        # Keep requests inside the static directory.
 
-        requested = (
+        safe_path = os.path.normpath(requested)
 
-            STATIC / relative
+        if safe_path.startswith(".."):
 
-        ).resolve()
+            json_response(
 
-        static_root = STATIC.resolve()
+                self,
 
-        # Prevent path traversal
+                {"error": "Invalid path"},
 
-        try:
-
-            requested.relative_to(static_root)
-
-        except ValueError:
-
-            self.send_json(
-
-                {
-
-                    "error": "Forbidden"
-
-                },
-
-                403,
+                400
 
             )
 
             return
 
-        if not requested.exists() or not requested.is_file():
+        file_path = os.path.join(
 
-            self.send_json(
+            STATIC_DIR,
 
-                {
+            safe_path
 
-                    "error": "Page not found"
+        )
 
-                },
+        if not os.path.isfile(file_path):
 
-                404,
+            json_response(
+
+                self,
+
+                {"error": "Page not found"},
+
+                404
 
             )
 
             return
-
-        content = requested.read_bytes()
 
         content_types = {
 
@@ -1685,143 +1348,97 @@ class GuamAIHostHandler(BaseHTTPRequestHandler):
 
             ".json": "application/json; charset=utf-8",
 
-            ".svg": "image/svg+xml",
-
             ".png": "image/png",
 
             ".jpg": "image/jpeg",
 
             ".jpeg": "image/jpeg",
 
-            ".webp": "image/webp",
+            ".svg": "image/svg+xml",
+
+            ".ico": "image/x-icon"
 
         }
 
+        extension = os.path.splitext(
+
+            file_path
+
+        )[1].lower()
+
         content_type = content_types.get(
 
-            requested.suffix.lower(),
+            extension,
 
-            "application/octet-stream",
-
-        )
-
-        self.send_response(200)
-
-        self.send_header(
-
-            "Content-Type",
-
-            content_type,
+            "application/octet-stream"
 
         )
 
-        self.send_header(
+        try:
 
-            "Content-Length",
+            with open(file_path, "rb") as file:
 
-            str(len(content)),
+                body = file.read()
 
-        )
+            self.send_response(200)
 
-        self.end_headers()
+            self.send_header(
 
-        self.wfile.write(content)
+                "Content-Type",
 
-    # --------------------------------------------------------
-
-    # OPTIONS / CORS
-
-    # --------------------------------------------------------
-
-    def do_OPTIONS(self):
-
-        self.send_response(204)
-
-        self.send_header(
-
-            "Access-Control-Allow-Origin",
-
-            "*",
-
-        )
-
-        self.send_header(
-
-            "Access-Control-Allow-Methods",
-
-            "GET, POST, OPTIONS",
-
-        )
-
-        self.send_header(
-
-            "Access-Control-Allow-Headers",
-
-            "Content-Type",
-
-        )
-
-        self.end_headers()
-
-    # --------------------------------------------------------
-
-    # LOGGING
-
-    # --------------------------------------------------------
-
-    def log_message(self, format, *args):
-
-        print(
-
-            "%s - %s"
-
-            % (
-
-                self.address_string(),
-
-                format % args,
+                content_type
 
             )
 
-        )
+            self.send_header(
 
-# ============================================================
+                "Content-Length",
 
-# START SERVER
+                str(len(body))
 
-# ============================================================
+            )
+
+            self.send_cors()
+
+            self.end_headers()
+
+            self.wfile.write(body)
+
+        except Exception as exc:
+
+            json_response(
+
+                self,
+
+                {
+
+                    "error": "Unable to read file",
+
+                    "details": str(exc)
+
+                },
+
+                500
+
+            )
+
+# ---------------------------------------------------------
+
+# START APPLICATION
+
+# ---------------------------------------------------------
 
 if _name_ == "_main_":
 
-    seed_database()
+    init_db()
+
+    seed()
 
     print(
 
-        "=================================================="
+        f"Guam AI Host V4 running on "
 
-    )
-
-    print(
-
-        "🌴 Guam AI Host V4"
-
-    )
-
-    print(
-
-        f"Server: http://{HOST}:{PORT}"
-
-    )
-
-    print(
-
-        f"Database: {DB}"
-
-    )
-
-    print(
-
-        "=================================================="
+        f"http://{HOST}:{PORT}"
 
     )
 
@@ -1829,22 +1446,8 @@ if _name_ == "_main_":
 
         (HOST, PORT),
 
-        GuamAIHostHandler,
+        GuamAIHostHandler
 
     )
 
-    try:
-
-        server.serve_forever()
-
-    except KeyboardInterrupt:
-
-        print(
-
-            "\nServer stopped."
-
-        )
-
-    finally:
-
-        server.server_close()
+    server.serve_forever()
