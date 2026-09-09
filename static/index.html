@@ -2022,29 +2022,17 @@
 
             body: JSON.stringify({
 
-              experience_id:
+    experience_id: selectedExperience.id,
 
-                selectedExperience.id,
+    quantity: quantity,
 
-              qty:
+    traveler_name: name,
 
-                quantity,
+    traveler_email: email,
 
-              name:
+    language: language
 
-                name,
-
-              email:
-
-                email,
-
-              language:
-
-                language,
-
-              budget:
-
-                document.getElementById(
+})
 
                   "aiBudget"
 
